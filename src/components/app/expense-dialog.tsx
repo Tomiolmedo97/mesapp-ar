@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { Check } from "lucide-react";
+import { PersonAvatar } from "@/components/app/person-avatar";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -163,7 +165,7 @@ export function ExpenseDialog({ mesa, expense, open, onOpenChange }: Props) {
           </fieldset>
 
           <fieldset className="flex flex-col gap-2">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex items-baseline justify-between gap-3">
               <legend className="text-sm font-medium">Se divide entre</legend>
               <button
                 type="button"
@@ -174,25 +176,59 @@ export function ExpenseDialog({ mesa, expense, open, onOpenChange }: Props) {
                   )
                 }
               >
-                {allSelected ? "Ninguno" : "Todos"}
+                {allSelected ? "Sacar a todos" : "Marcar a todos"}
               </button>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <p className="text-xs text-muted-foreground">
+              {splitAmong.length === 0
+                ? "Nadie entra. Marcá a quienes participan."
+                : allSelected
+                  ? "Entran todos."
+                  : `Entran ${splitAmong.length} de ${mesa.people.length}.`}
+            </p>
+            <div className="flex flex-col gap-1.5">
               {mesa.people.map((person) => {
                 const selected = splitAmong.includes(person.id);
                 return (
                   <button
                     key={person.id}
                     type="button"
+                    role="checkbox"
+                    aria-checked={selected}
                     onClick={() => togglePerson(person.id)}
                     className={cn(
-                      "h-11 rounded-full px-4 text-sm transition-[background-color,color,box-shadow] duration-150",
+                      "flex h-14 items-center gap-3 rounded-xl px-3 text-left transition-[background-color,color,box-shadow,opacity] duration-150",
                       selected
                         ? "bg-primary text-primary-foreground"
-                        : "bg-secondary text-muted-foreground shadow-[var(--shadow-border)]",
+                        : "bg-background text-muted-foreground shadow-[var(--shadow-border)]",
                     )}
                   >
-                    {person.name}
+                    <span className={cn(!selected && "opacity-40")}>
+                      <PersonAvatar id={person.id} name={person.name} />
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                      {person.name}
+                    </span>
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-2 text-xs font-medium tracking-wide uppercase",
+                        selected
+                          ? "text-primary-foreground"
+                          : "text-muted-foreground",
+                      )}
+                    >
+                      {selected ? "Entra" : "No entra"}
+                      <span
+                        className={cn(
+                          "inline-flex size-6 items-center justify-center rounded-full",
+                          selected
+                            ? "bg-primary-foreground text-primary"
+                            : "bg-transparent shadow-[var(--shadow-border)]",
+                        )}
+                      >
+                        {selected ? <Check className="size-3.5" strokeWidth={2.5} /> : null}
+                      </span>
+                    </span>
                   </button>
                 );
               })}
