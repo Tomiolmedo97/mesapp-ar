@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as NuevaRouteImport } from './routes/nueva'
+import { Route as MTokenRouteImport } from './routes/m.$token'
 import { Route as MesaIdRouteImport } from './routes/mesa.$id'
 
 const IndexRoute = IndexRouteImport.update({
@@ -23,6 +24,11 @@ const NuevaRoute = NuevaRouteImport.update({
   path: '/nueva',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MTokenRoute = MTokenRouteImport.update({
+  id: '/m/$token',
+  path: '/m/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MesaIdRoute = MesaIdRouteImport.update({
   id: '/mesa/$id',
   path: '/mesa/$id',
@@ -32,30 +38,34 @@ const MesaIdRoute = MesaIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/nueva': typeof NuevaRoute
+  '/m/$token': typeof MTokenRoute
   '/mesa/$id': typeof MesaIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/nueva': typeof NuevaRoute
+  '/m/$token': typeof MTokenRoute
   '/mesa/$id': typeof MesaIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/nueva': typeof NuevaRoute
+  '/m/$token': typeof MTokenRoute
   '/mesa/$id': typeof MesaIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/nueva' | '/mesa/$id'
+  fullPaths: '/' | '/nueva' | '/m/$token' | '/mesa/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/nueva' | '/mesa/$id'
-  id: '__root__' | '/' | '/nueva' | '/mesa/$id'
+  to: '/' | '/nueva' | '/m/$token' | '/mesa/$id'
+  id: '__root__' | '/' | '/nueva' | '/m/$token' | '/mesa/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   NuevaRoute: typeof NuevaRoute
+  MTokenRoute: typeof MTokenRoute
   MesaIdRoute: typeof MesaIdRoute
 }
 
@@ -75,6 +85,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NuevaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/m/$token': {
+      id: '/m/$token'
+      path: '/m/$token'
+      fullPath: '/m/$token'
+      preLoaderRoute: typeof MTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/mesa/$id': {
       id: '/mesa/$id'
       path: '/mesa/$id'
@@ -88,6 +105,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   NuevaRoute: NuevaRoute,
+  MTokenRoute: MTokenRoute,
   MesaIdRoute: MesaIdRoute,
 }
 export const routeTree = rootRouteImport

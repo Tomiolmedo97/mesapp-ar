@@ -9,10 +9,12 @@ export function ExpenseList({
   mesa,
   onAdd,
   onEdit,
+  readOnly = false,
 }: {
   mesa: Mesa;
-  onAdd: () => void;
-  onEdit: (expense: Expense) => void;
+  onAdd?: () => void;
+  onEdit?: (expense: Expense) => void;
+  readOnly?: boolean;
 }) {
   const removeExpense = useMesaStore((s) => s.removeExpense);
   const canAdd = mesa.people.length > 0;
@@ -23,17 +25,19 @@ export function ExpenseList({
         <h2 className="font-display text-xl font-medium tracking-tight text-foreground">
           Gastos
         </h2>
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          className="rounded-full"
-          disabled={!canAdd}
-          onClick={onAdd}
-        >
-          <Plus className="size-4" />
-          Agregar
-        </Button>
+        {readOnly ? null : (
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="rounded-full"
+            disabled={!canAdd}
+            onClick={onAdd}
+          >
+            <Plus className="size-4" />
+            Agregar
+          </Button>
+        )}
       </div>
 
       {!canAdd ? (
@@ -41,18 +45,24 @@ export function ExpenseList({
           Primero sumá personas para cargar un gasto.
         </p>
       ) : mesa.expenses.length === 0 ? (
-        <button
-          type="button"
-          onClick={onAdd}
-          className="flex min-h-28 flex-col items-start justify-center rounded-2xl bg-card px-5 py-6 text-left shadow-[var(--shadow-border)] transition-[box-shadow] duration-150 hover:shadow-[var(--shadow-border-hover)]"
-        >
-          <span className="font-display text-lg text-foreground">
-            Todavía no hay nada cargado
-          </span>
-          <span className="mt-1 text-sm text-muted-foreground">
-            Tocá para agregar el primer gasto.
-          </span>
-        </button>
+        readOnly ? (
+          <p className="rounded-2xl bg-card px-5 py-6 text-sm leading-relaxed text-muted-foreground shadow-[var(--shadow-border)]">
+            Esta mesa no tiene gastos.
+          </p>
+        ) : (
+          <button
+            type="button"
+            onClick={onAdd}
+            className="flex min-h-28 flex-col items-start justify-center rounded-2xl bg-card px-5 py-6 text-left shadow-[var(--shadow-border)] transition-[box-shadow] duration-150 hover:shadow-[var(--shadow-border-hover)]"
+          >
+            <span className="font-display text-lg text-foreground">
+              Todavía no hay nada cargado
+            </span>
+            <span className="mt-1 text-sm text-muted-foreground">
+              Tocá para agregar el primer gasto.
+            </span>
+          </button>
+        )
       ) : (
         <ul className="flex flex-col overflow-hidden rounded-2xl bg-card shadow-[var(--shadow-border)]">
           {mesa.expenses.map((expense, index) => {
@@ -69,34 +79,55 @@ export function ExpenseList({
                 }
               >
                 <div className="flex items-stretch">
-                  <button
-                    type="button"
-                    onClick={() => onEdit(expense)}
-                    className="flex min-h-16 flex-1 items-center gap-3 px-4 py-3 text-left"
-                  >
-                    {payer ? (
-                      <PersonAvatar id={payer.id} name={payer.name} />
-                    ) : null}
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium text-foreground">
-                        {expense.description}
+                  {readOnly ? (
+                    <div className="flex min-h-16 flex-1 items-center gap-3 px-4 py-3">
+                      {payer ? (
+                        <PersonAvatar id={payer.id} name={payer.name} />
+                      ) : null}
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium text-foreground">
+                          {expense.description}
+                        </span>
+                        <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                          Pagó {payer?.name ?? "alguien"} · {among}
+                        </span>
                       </span>
-                      <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-                        Pagó {payer?.name ?? "alguien"} · {among}
+                      <span className="shrink-0 text-sm font-medium tabular-nums text-foreground">
+                        {formatCents(expense.amountCents)}
                       </span>
-                    </span>
-                    <span className="shrink-0 text-sm font-medium tabular-nums text-foreground">
-                      {formatCents(expense.amountCents)}
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    className="relative inline-flex w-11 items-center justify-center text-muted-foreground transition-[color,background-color] duration-150 hover:bg-accent hover:text-foreground"
-                    aria-label={`Eliminar ${expense.description}`}
-                    onClick={() => removeExpense(mesa.id, expense.id)}
-                  >
-                    <Trash2 className="size-4" />
-                  </button>
+                    </div>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => onEdit?.(expense)}
+                        className="flex min-h-16 flex-1 items-center gap-3 px-4 py-3 text-left"
+                      >
+                        {payer ? (
+                          <PersonAvatar id={payer.id} name={payer.name} />
+                        ) : null}
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-medium text-foreground">
+                            {expense.description}
+                          </span>
+                          <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                            Pagó {payer?.name ?? "alguien"} · {among}
+                          </span>
+                        </span>
+                        <span className="shrink-0 text-sm font-medium tabular-nums text-foreground">
+                          {formatCents(expense.amountCents)}
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        className="relative inline-flex w-11 items-center justify-center text-muted-foreground transition-[color,background-color] duration-150 hover:bg-accent hover:text-foreground"
+                        aria-label={`Eliminar ${expense.description}`}
+                        onClick={() => removeExpense(mesa.id, expense.id)}
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
+                    </>
+                  )}
                 </div>
               </li>
             );

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Check, ChevronRight, Copy, Share2 } from "lucide-react";
+import { Check, ChevronRight, Copy, Link2, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { PersonAvatar } from "@/components/app/person-avatar";
 import { WhyDialog } from "@/components/app/why-dialog";
 import { copyText } from "@/lib/clipboard";
+import { mesaShareUrl } from "@/lib/mesa-link";
 import { formatCents } from "@/lib/money";
 import {
   buildShareText,
@@ -31,11 +32,19 @@ import {
 import { useMesaStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
-export function SettlementCard({ mesa }: { mesa: Mesa }) {
+export function SettlementCard({
+  mesa,
+  readOnly = false,
+}: {
+  mesa: Mesa;
+  readOnly?: boolean;
+}) {
   const setTipPercent = useMesaStore((s) => s.setTipPercent);
   const togglePaidTransfer = useMesaStore((s) => s.togglePaidTransfer);
   const [copied, setCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const [canShare, setCanShare] = useState(false);
+  const [origin, setOrigin] = useState("");
   const [previewOpen, setPreviewOpen] = useState(false);
   const [whyTransfer, setWhyTransfer] = useState<Transfer | null>(null);
   const [whyPersonId, setWhyPersonId] = useState<string | null>(null);
@@ -51,10 +60,13 @@ export function SettlementCard({ mesa }: { mesa: Mesa }) {
   const percent = clampTipPercent(mesa.tipPercent);
   const summaries = personSummaries(mesa);
   const shareText = buildShareText(mesa);
+  const link = origin ? mesaShareUrl(mesa, origin) : null;
+  const textWithLink = link ? `${shareText}\n\n${link}` : shareText;
   const customActive = percent !== 0 && percent !== 10;
 
   useEffect(() => {
     setCanShare(typeof navigator !== "undefined" && Boolean(navigator.share));
+    setOrigin(window.location.origin);
   }, []);
 
   useEffect(() => {
@@ -63,8 +75,14 @@ export function SettlementCard({ mesa }: { mesa: Mesa }) {
     return () => window.clearTimeout(timer);
   }, [copied]);
 
+  useEffect(() => {
+    if (!linkCopied) return;
+    const timer = window.setTimeout(() => setLinkCopied(false), 1600);
+    return () => window.clearTimeout(timer);
+  }, [linkCopied]);
+
   async function copySummary() {
-    const ok = await copyText(shareText);
+    const ok = await copyText(textWithLink);
     if (ok) {
       setCopied(true);
       toast.success("División copiada.");
@@ -76,7 +94,10 @@ export function SettlementCard({ mesa }: { mesa: Mesa }) {
   async function shareSummary() {
     if (navigator.share) {
       try {
-        await navigator.share({ title: `Mesa · ${mesa.title}`, text: shareText });
+        await navigator.share({
+          title: `Mesa · ${mesa.title}`,
+          text: textWithLink,
+        });
         return;
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") {
@@ -85,6 +106,33 @@ export function SettlementCard({ mesa }: { mesa: Mesa }) {
       }
     }
     await copySummary();
+  }
+
+  async function shareLink() {
+    if (!link) {
+      toast.error("Esta mesa es demasiado grande para un link.");
+      return;
+    }
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Mesa · ${mesa.title}`,
+          url: link,
+        });
+        return;
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+      }
+    }
+    const ok = await copyText(link);
+    if (ok) {
+      setLinkCopied(true);
+      toast.success("Link copiado. Quien lo abra ve esta mesa.");
+    } else {
+      setPreviewOpen(true);
+    }
   }
 
   return (
@@ -103,7 +151,7 @@ export function SettlementCard({ mesa }: { mesa: Mesa }) {
         ) : null}
       </div>
 
-      {subtotal > 0 ? (
+      {subtotal > 0 && !readOnly ? (
         <div className="flex flex-col gap-2">
           <p className="text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
             Propina
@@ -260,30 +308,36 @@ export function SettlementCard({ mesa }: { mesa: Mesa }) {
                     </div>
                     <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
                   </button>
-                  <button
-                    type="button"
-                    aria-label={
-                      paid
-                        ? `${from.name} ya le pagó a ${to.name}. Marcar como pendiente.`
-                        : `${from.name} le debe a ${to.name}. Marcar como pagado.`
-                    }
-                    onClick={() =>
-                      togglePaidTransfer(mesa.id, transfer.fromId, transfer.toId)
-                    }
-                    className="inline-flex w-12 shrink-0 items-center justify-center"
-                  >
-                    <span
-                      className={cn(
-                        "inline-flex size-8 items-center justify-center rounded-full",
+                  {readOnly ? null : (
+                    <button
+                      type="button"
+                      aria-label={
                         paid
-                          ? "bg-primary text-primary-foreground"
-                          : "text-muted-foreground shadow-[var(--shadow-border)]",
-                      )}
-                      aria-hidden="true"
+                          ? `${from.name} ya le pagó a ${to.name}. Marcar como pendiente.`
+                          : `${from.name} le debe a ${to.name}. Marcar como pagado.`
+                      }
+                      onClick={() =>
+                        togglePaidTransfer(
+                          mesa.id,
+                          transfer.fromId,
+                          transfer.toId,
+                        )
+                      }
+                      className="inline-flex w-12 shrink-0 items-center justify-center"
                     >
-                      <Check className="size-3.5" />
-                    </span>
-                  </button>
+                      <span
+                        className={cn(
+                          "inline-flex size-8 items-center justify-center rounded-full",
+                          paid
+                            ? "bg-primary text-primary-foreground"
+                            : "text-muted-foreground shadow-[var(--shadow-border)]",
+                        )}
+                        aria-hidden="true"
+                      >
+                        <Check className="size-3.5" />
+                      </span>
+                    </button>
+                  )}
                 </li>
               );
             })}
@@ -336,6 +390,36 @@ export function SettlementCard({ mesa }: { mesa: Mesa }) {
         ) : null}
       </div>
 
+      <Button
+        type="button"
+        variant="secondary"
+        className="rounded-xl"
+        onClick={shareLink}
+        disabled={!link}
+      >
+        <span className="relative inline-flex size-4 items-center justify-center">
+          <Link2
+            className={cn(
+              "absolute size-4 transition-[opacity,transform] duration-300",
+              linkCopied ? "scale-[0.25] opacity-0" : "scale-100 opacity-100",
+            )}
+          />
+          <Check
+            className={cn(
+              "absolute size-4 transition-[opacity,transform] duration-300",
+              linkCopied ? "scale-100 opacity-100" : "scale-[0.25] opacity-0",
+            )}
+          />
+        </span>
+        {linkCopied ? "Link copiado" : "Link de la mesa"}
+      </Button>
+      {readOnly ? null : (
+        <p className="-mt-3 text-xs leading-relaxed text-muted-foreground">
+          Quien lo abra ve esta mesa como está ahora, con el detalle de cada
+          movimiento.
+        </p>
+      )}
+
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
         <DialogContent className="rounded-2xl border-border bg-card">
           <DialogHeader>
@@ -357,7 +441,7 @@ export function SettlementCard({ mesa }: { mesa: Mesa }) {
               selection?.addRange(range);
             }}
           >
-            {shareText}
+            {textWithLink}
           </pre>
         </DialogContent>
       </Dialog>
